@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "name": "autodesk-mail-ai",
+  "public": true,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
+      ]
+    }
+  ],
+  "routes": [
+    { "src": "/taskpane.html",  "dest": "/taskpane.html"  },
+    { "src": "/commands.html",  "dest": "/commands.html"  },
+    { "src": "/manifest.xml",   "dest": "/manifest.xml"   },
+    { "src": "/assets/(.*)",    "dest": "/assets/$1"      }
+  ]
+}

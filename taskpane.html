@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Autodesk AI Assistant</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f0f10;
+      --surface: #18181b;
+      --surface2: #222228;
+      --border: #2e2e38;
+      --accent: #f47920;
+      --accent2: #ff9a45;
+      --text: #e8e8ee;
+      --muted: #7a7a8c;
+      --success: #22c55e;
+      --error: #ef4444;
+      --blue: #3b82f6;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'IBM Plex Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .logo {
+      width: 28px;
+      height: 28px;
+      background: var(--accent);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 600;
+      font-size: 12px;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .header-info { flex: 1 }
+    .header-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: 0.01em;
+    }
+    .header-sub {
+      font-size: 10px;
+      color: var(--muted);
+      font-family: 'IBM Plex Mono', monospace;
+      letter-spacing: 0.05em;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 6px var(--success);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ── API Key Banner ── */
+    #apiKeySection {
+      padding: 12px 14px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .api-label {
+      font-size: 10px;
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+    .api-row {
+      display: flex;
+      gap: 6px;
+    }
+    .api-input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 6px 10px;
+      color: var(--text);
+      font-size: 11px;
+      font-family: 'IBM Plex Mono', monospace;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .api-input:focus { border-color: var(--accent); }
+    .btn-sm {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+    .btn-sm:hover { background: var(--accent2); }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .tab {
+      flex: 1;
+      padding: 9px 4px;
+      text-align: center;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .tab:hover:not(.active) { color: var(--text); }
+
+    /* ── Scroll container ── */
+    .scroll-area {
+      flex: 1;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    .scroll-area::-webkit-scrollbar { width: 4px; }
+    .scroll-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* ── Panel ── */
+    .panel { display: none; padding: 14px; }
+    .panel.active { display: block; }
+
+    /* ── Email context card ── */
+    .email-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .email-card-label {
+      font-size: 9px;
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+    .email-subject {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+      line-height: 1.4;
+    }
+    .email-from {
+      font-size: 10px;
+      color: var(--muted);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    /* ── Section title ── */
+    .section-title {
+      font-size: 10px;
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+      margin-top: 14px;
+    }
+    .section-title:first-child { margin-top: 0; }
+
+    /* ── Quick action chips ── */
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 11px;
+      font-size: 11px;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .chip:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(244,121,32,0.08);
+    }
+
+    /* ── Response output ── */
+    .output-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 12px;
+      line-height: 1.65;
+      color: var(--text);
+      min-height: 100px;
+      position: relative;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .output-box.loading { color: var(--muted); font-style: italic; }
+    .output-box .placeholder { color: var(--muted); font-style: italic; }
+
+    .output-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .btn-outline {
+      flex: 1;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 7px 10px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-primary {
+      flex: 1;
+      background: var(--accent);
+      border: none;
+      border-radius: 5px;
+      padding: 7px 10px;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-primary:hover { background: var(--accent2); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Grammar textarea ── */
+    .grammar-wrap { position: relative; margin-bottom: 10px; }
+    .grammar-input {
+      width: 100%;
+      min-height: 100px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      color: var(--text);
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 12px;
+      line-height: 1.65;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .grammar-input:focus { border-color: var(--accent); }
+    .grammar-input::placeholder { color: var(--muted); }
+
+    /* ── Diff output ── */
+    .diff-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 12px;
+      line-height: 1.7;
+      min-height: 80px;
+    }
+    .diff-del { color: var(--error); text-decoration: line-through; opacity: 0.7; }
+    .diff-add { color: var(--success); font-weight: 500; }
+    .diff-same { color: var(--text); }
+
+    /* ── Custom prompt ── */
+    .custom-row {
+      display: flex;
+      gap: 6px;
+    }
+    .custom-input {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 8px 10px;
+      color: var(--text);
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 12px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .custom-input:focus { border-color: var(--accent); }
+    .custom-input::placeholder { color: var(--muted); }
+
+    /* ── Knowledge tags ── */
+    .knowledge-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 12px;
+    }
+    .k-tag {
+      background: rgba(244,121,32,0.1);
+      border: 1px solid rgba(244,121,32,0.3);
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 10px;
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Tone selector ── */
+    .tone-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .tone-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 11px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: left;
+    }
+    .tone-btn .t-label { font-weight: 600; color: var(--text); display: block; margin-bottom: 2px; }
+    .tone-btn .t-desc { font-size: 9px; }
+    .tone-btn:hover, .tone-btn.active {
+      border-color: var(--accent);
+      background: rgba(244,121,32,0.06);
+    }
+    .tone-btn.active .t-label { color: var(--accent); }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%) translateY(60px);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 12px;
+      color: var(--text);
+      transition: transform 0.3s ease;
+      z-index: 100;
+      white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── Spinner ── */
+    .spinner {
+      display: inline-block;
+      width: 12px; height: 12px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Loading bar ── */
+    .loading-bar {
+      height: 2px;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.3s;
+      border-radius: 1px;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">AI</div>
+  <div class="header-info">
+    <div class="header-title">Autodesk Mail AI</div>
+    <div class="header-sub">AEC · MFG · UTILITY</div>
+  </div>
+  <div class="status-dot" id="statusDot" title="Ready"></div>
+</div>
+
+<!-- API Key Section -->
+<div id="apiKeySection">
+  <div class="api-label">Anthropic API Key</div>
+  <div class="api-row">
+    <input class="api-input" type="password" id="apiKeyInput" placeholder="sk-ant-..." />
+    <button class="btn-sm" onclick="saveApiKey()">Save</button>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('reply')" id="tab-reply">Reply</div>
+  <div class="tab" onclick="switchTab('grammar')" id="tab-grammar">Grammar</div>
+  <div class="tab" onclick="switchTab('compose')" id="tab-compose">Compose</div>
+  <div class="tab" onclick="switchTab('insights')" id="tab-insights">Insights</div>
+</div>
+
+<!-- Main scroll area -->
+<div class="scroll-area">
+
+  <!-- ── REPLY PANEL ── -->
+  <div class="panel active" id="panel-reply">
+    <div class="email-card" id="emailCard">
+      <div class="email-card-label">Current Email</div>
+      <div class="email-subject" id="emailSubject">Loading email…</div>
+      <div class="email-from" id="emailFrom">—</div>
+    </div>
+
+    <div class="section-title">Quick Actions</div>
+    <div class="chips">
+      <div class="chip" onclick="quickAction('acknowledge')">✓ Acknowledge</div>
+      <div class="chip" onclick="quickAction('needMoreInfo')">? Need More Info</div>
+      <div class="chip" onclick="quickAction('schedule')">📅 Schedule Meeting</div>
+      <div class="chip" onclick="quickAction('decline')">✗ Politely Decline</div>
+      <div class="chip" onclick="quickAction('escalate')">↑ Escalate</div>
+      <div class="chip" onclick="quickAction('followUp')">→ Follow Up</div>
+    </div>
+
+    <div class="section-title">Tone</div>
+    <div class="tone-grid">
+      <div class="tone-btn active" data-tone="professional" onclick="selectTone(this)">
+        <span class="t-label">Professional</span>
+        <span class="t-desc">Formal & business-ready</span>
+      </div>
+      <div class="tone-btn" data-tone="concise" onclick="selectTone(this)">
+        <span class="t-label">Concise</span>
+        <span class="t-desc">Short & to the point</span>
+      </div>
+      <div class="tone-btn" data-tone="consultative" onclick="selectTone(this)">
+        <span class="t-label">Consultative</span>
+        <span class="t-desc">Advisory & solution-led</span>
+      </div>
+      <div class="tone-btn" data-tone="friendly" onclick="selectTone(this)">
+        <span class="t-label">Friendly</span>
+        <span class="t-desc">Warm & approachable</span>
+      </div>
+    </div>
+
+    <div class="section-title">Custom Prompt</div>
+    <div class="custom-row" style="margin-bottom:12px">
+      <input class="custom-input" id="customPrompt" placeholder="e.g. Mention BIM 360 handoff process…" />
+      <button class="btn-sm" onclick="customAction()">Go</button>
+    </div>
+
+    <div class="loading-bar" id="replyLoadingBar"></div>
+    <div class="output-box" id="replyOutput">
+      <span class="placeholder">Select an action above to generate a reply…</span>
+    </div>
+    <div class="output-actions">
+      <button class="btn-outline" onclick="regenerate()">↺ Regenerate</button>
+      <button class="btn-primary" id="insertBtn" onclick="insertReply()" disabled>Insert →</button>
+    </div>
+  </div>
+
+  <!-- ── GRAMMAR PANEL ── -->
+  <div class="panel" id="panel-grammar">
+    <div class="section-title">Paste or type your text</div>
+    <div class="grammar-wrap">
+      <textarea class="grammar-input" id="grammarInput" placeholder="Type or paste a sentence you want to improve…"></textarea>
+    </div>
+    <div class="chips" style="margin-bottom:12px">
+      <div class="chip" onclick="grammarAction('fix')">✓ Fix Grammar</div>
+      <div class="chip" onclick="grammarAction('rewrite')">✏ Rewrite Clearly</div>
+      <div class="chip" onclick="grammarAction('shorten')">✂ Shorten</div>
+      <div class="chip" onclick="grammarAction('formal')">👔 Make Formal</div>
+      <div class="chip" onclick="grammarAction('technical')">⚙ Make Technical</div>
+      <div class="chip" onclick="grammarAction('simplify')">💡 Simplify Jargon</div>
+    </div>
+
+    <div class="loading-bar" id="grammarLoadingBar"></div>
+    <div class="section-title">Result</div>
+    <div class="diff-box" id="grammarOutput">
+      <span style="color:var(--muted);font-style:italic">Result will appear here…</span>
+    </div>
+    <div class="output-actions" style="margin-top:8px">
+      <button class="btn-outline" onclick="copyGrammar()">⎘ Copy</button>
+      <button class="btn-primary" onclick="applyGrammar()">Apply to Compose</button>
+    </div>
+  </div>
+
+  <!-- ── COMPOSE PANEL ── -->
+  <div class="panel" id="panel-compose">
+    <div class="section-title">What do you need to write?</div>
+    <textarea class="grammar-input" id="composePrompt" placeholder="e.g. Draft a proposal email to a civil engineering firm explaining how Autodesk Civil 3D can streamline their road design workflow…" style="min-height:80px;margin-bottom:10px"></textarea>
+
+    <div class="section-title">Vertical</div>
+    <div class="chips" style="margin-bottom:12px">
+      <div class="chip vertical-chip active-chip" onclick="selectVertical(this,'AEC')">AEC</div>
+      <div class="chip vertical-chip" onclick="selectVertical(this,'MFG')">MFG</div>
+      <div class="chip vertical-chip" onclick="selectVertical(this,'Utility')">Utility</div>
+      <div class="chip vertical-chip" onclick="selectVertical(this,'General')">General</div>
+    </div>
+
+    <div class="section-title">Templates</div>
+    <div class="chips" style="margin-bottom:12px">
+      <div class="chip" onclick="composeTemplate('proposal')">📄 Proposal</div>
+      <div class="chip" onclick="composeTemplate('followup')">📬 Follow-Up</div>
+      <div class="chip" onclick="composeTemplate('intro')">👋 Introduction</div>
+      <div class="chip" onclick="composeTemplate('demo')">🖥 Demo Request</div>
+      <div class="chip" onclick="composeTemplate('renewal')">🔄 Renewal</div>
+      <div class="chip" onclick="composeTemplate('escalation')">⚠ Escalation</div>
+    </div>
+
+    <button class="btn-primary" style="width:100%;margin-bottom:12px" onclick="composeEmail()">Generate Email</button>
+
+    <div class="loading-bar" id="composeLoadingBar"></div>
+    <div class="output-box" id="composeOutput">
+      <span class="placeholder">Your composed email will appear here…</span>
+    </div>
+    <div class="output-actions">
+      <button class="btn-outline" onclick="copyCompose()">⎘ Copy</button>
+      <button class="btn-primary" onclick="insertCompose()">Insert →</button>
+    </div>
+  </div>
+
+  <!-- ── INSIGHTS PANEL ── -->
+  <div class="panel" id="panel-insights">
+    <div class="section-title">Industry Knowledge Base</div>
+    <div class="knowledge-tags">
+      <div class="k-tag">BIM 360</div>
+      <div class="k-tag">Revit</div>
+      <div class="k-tag">Civil 3D</div>
+      <div class="k-tag">AutoCAD</div>
+      <div class="k-tag">Navisworks</div>
+      <div class="k-tag">Construction Cloud</div>
+      <div class="k-tag">Fusion 360</div>
+      <div class="k-tag">Inventor</div>
+      <div class="k-tag">Vault</div>
+      <div class="k-tag">Factory Design</div>
+      <div class="k-tag">InfraWorks</div>
+      <div class="k-tag">ArcGIS Integration</div>
+      <div class="k-tag">GIS Utility</div>
+      <div class="k-tag">Asset Management</div>
+      <div class="k-tag">Digital Twin</div>
+      <div class="k-tag">ISO 19650</div>
+      <div class="k-tag">CDE Workflow</div>
+      <div class="k-tag">PDM/PLM</div>
+    </div>
+
+    <div class="section-title">Analyze Current Email</div>
+    <div class="chips" style="margin-bottom:12px">
+      <div class="chip" onclick="analyzeAction('sentiment')">😐 Sentiment</div>
+      <div class="chip" onclick="analyzeAction('intent')">🎯 Intent</div>
+      <div class="chip" onclick="analyzeAction('vertical')">🏗 Identify Vertical</div>
+      <div class="chip" onclick="analyzeAction('urgency')">⚡ Urgency Level</div>
+      <div class="chip" onclick="analyzeAction('opportunities')">💡 Opportunities</div>
+      <div class="chip" onclick="analyzeAction('risks')">⚠ Risks & Flags</div>
+    </div>
+
+    <div class="loading-bar" id="insightsLoadingBar"></div>
+    <div class="output-box" id="insightsOutput">
+      <span class="placeholder">Select an analysis type above…</span>
+    </div>
+  </div>
+
+</div><!-- end scroll-area -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+let apiKey = '';
+let currentTone = 'professional';
+let currentVertical = 'AEC';
+let lastReplyText = '';
+let lastComposeText = '';
+let lastGrammarText = '';
+let lastAction = null;
+let emailContext = { subject: '', from: '', body: '' };
+
+// ═══════════════════════════════════════════════════════
+//  AUTODESK SYSTEM PROMPT
+// ═══════════════════════════════════════════════════════
+const AUTODESK_SYSTEM = `You are an elite AI email assistant embedded in Microsoft Outlook for an Autodesk sales/technical professional. You have deep expertise across all three Autodesk verticals:
+
+## AEC (Architecture, Engineering & Construction)
+- Products: Revit, AutoCAD, Civil 3D, Navisworks, InfraWorks, BIM 360, Autodesk Construction Cloud (ACC), Forma, Tandem
+- Workflows: BIM (Building Information Modeling), clash detection, design collaboration, CDE (Common Data Environment), ISO 19650 standards, generative design, quantity takeoff, 4D/5D scheduling
+- Buyer personas: Architects, structural/civil engineers, MEP consultants, general contractors, project owners, BIM managers
+- Pain points: Disconnected workflows, rework from coordination issues, cost overruns, manual document management, lack of real-time site visibility
+
+## MFG (Manufacturing)
+- Products: Fusion 360, Inventor, AutoCAD Mechanical, Vault, Factory Design Utilities, Moldflow, Nastran, HSM/CAM, Nesting Utilities
+- Workflows: PDM/PLM, CAD-to-CAM, simulation-driven design, generative design, ERP integration, bill of materials management, version control
+- Buyer personas: Product designers, mechanical engineers, CAD administrators, manufacturing engineers, IT/PLM managers
+- Pain points: Design-to-manufacture handoff errors, slow iteration cycles, disconnected CAD/PDM/ERP, managing large assemblies, compliance documentation
+
+## Utility (Infrastructure & Utilities)
+- Products: AutoCAD Map 3D, Civil 3D, InfraWorks, ArcGIS integration, Autodesk Procore integrations, asset management integrations
+- Workflows: GIS integration, asset lifecycle management, network modeling, digital twin for infrastructure, capital project management, regulatory compliance
+- Buyer personas: Utility engineers, GIS analysts, asset managers, operations managers, capital project teams
+- Pain points: Aging infrastructure data, siloed GIS and engineering tools, manual field inspections, compliance reporting, lack of digital twin visibility
+
+## Communication Style Guidelines
+- Always write like a seasoned Autodesk professional — confident, knowledgeable, and customer-centric
+- Use appropriate Autodesk product names and correct terminology
+- Reference real industry standards (IFC, ISO 19650, OSHA, IEEE, etc.) when relevant
+- Avoid generic tech sales language — be specific and credible
+- Adapt tone to context: enterprise deals = formal; mid-market = consultative; existing customers = collaborative`;
+
+// ═══════════════════════════════════════════════════════
+//  OFFICE.JS INIT
+// ═══════════════════════════════════════════════════════
+Office.onReady(function(info) {
+  if (info.host === Office.HostType.Outlook) {
+    loadEmailContext();
+  }
+  loadStoredApiKey();
+});
+
+function loadStoredApiKey() {
+  const stored = localStorage.getItem('adsk_ai_apikey');
+  if (stored) {
+    apiKey = stored;
+    document.getElementById('apiKeyInput').value = stored;
+    document.getElementById('apiKeySection').style.display = 'none';
+  }
+}
+
+function saveApiKey() {
+  const val = document.getElementById('apiKeyInput').value.trim();
+  if (!val.startsWith('sk-ant-')) {
+    showToast('⚠ Enter a valid Anthropic API key (starts with sk-ant-)');
+    return;
+  }
+  apiKey = val;
+  localStorage.setItem('adsk_ai_apikey', val);
+  document.getElementById('apiKeySection').style.display = 'none';
+  showToast('✓ API Key saved');
+}
+
+function loadEmailContext() {
+  try {
+    const item = Office.context.mailbox.item;
+    emailContext.subject = item.subject || '(No Subject)';
+
+    // From field differs: read vs compose mode
+    if (item.from) {
+      emailContext.from = item.from.displayName + ' <' + item.from.emailAddress + '>';
+    } else if (item.sender) {
+      emailContext.from = item.sender.displayName + ' <' + item.sender.emailAddress + '>';
+    } else {
+      emailContext.from = 'New Compose';
+    }
+
+    document.getElementById('emailSubject').textContent = emailContext.subject;
+    document.getElementById('emailFrom').textContent = emailContext.from;
+
+    // Get body
+    item.body.getAsync(Office.CoercionType.Text, function(result) {
+      if (result.status === Office.AsyncResultStatus.Succeeded) {
+        emailContext.body = result.value.substring(0, 3000);
+      }
+    });
+  } catch (e) {
+    // Running outside Outlook (e.g. browser test)
+    document.getElementById('emailSubject').textContent = 'Test Mode (No Outlook)';
+    document.getElementById('emailFrom').textContent = 'demo@autodesk.com';
+    emailContext = {
+      subject: 'Follow up on BIM 360 integration proposal',
+      from: 'John Smith <j.smith@aecfirm.com>',
+      body: 'Hi, I wanted to follow up on our discussion about implementing BIM 360 for our upcoming hospital project. We have about 50 users across design, engineering, and construction. What would be the next steps?'
+    };
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  CLAUDE API CALL
+// ═══════════════════════════════════════════════════════
+async function callClaude(userPrompt, loadingBarId) {
+  if (!apiKey) {
+    document.getElementById('apiKeySection').style.display = 'block';
+    showToast('⚠ Please enter your API key first');
+    return null;
+  }
+
+  const bar = document.getElementById(loadingBarId);
+  bar.style.width = '30%';
+  setStatus('thinking');
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-6',
+        max_tokens: 1200,
+        system: AUTODESK_SYSTEM,
+        messages: [{ role: 'user', content: userPrompt }]
+      })
+    });
+
+    bar.style.width = '90%';
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error?.message || 'API error');
+    }
+
+    const data = await response.json();
+    bar.style.width = '100%';
+    setTimeout(() => { bar.style.width = '0%'; }, 600);
+    setStatus('ready');
+    return data.content[0].text;
+  } catch (e) {
+    bar.style.width = '0%';
+    setStatus('ready');
+    showToast('✗ Error: ' + e.message);
+    return null;
+  }
+}
+
+function setStatus(state) {
+  const dot = document.getElementById('statusDot');
+  dot.style.background = state === 'thinking' ? 'var(--accent)' : 'var(--success)';
+  dot.style.boxShadow = state === 'thinking' ? '0 0 6px var(--accent)' : '0 0 6px var(--success)';
+}
+
+// ═══════════════════════════════════════════════════════
+//  REPLY PANEL
+// ═══════════════════════════════════════════════════════
+const quickActionPrompts = {
+  acknowledge: `Write a {tone} acknowledgement reply to this email. Confirm receipt, show understanding of their request, and indicate next steps. Keep it concise and professional.`,
+  needMoreInfo: `Write a {tone} reply asking for clarification or additional information needed to proceed. Be specific about what information is missing without sounding dismissive.`,
+  schedule: `Write a {tone} reply to schedule a meeting or call to discuss the topic further. Suggest 2-3 flexible time options and confirm the meeting agenda briefly.`,
+  decline: `Write a {tone} reply politely declining or redirecting without burning the relationship. Offer an alternative if possible.`,
+  escalate: `Write a {tone} reply indicating this will be escalated to the appropriate team/person. Reassure the sender and set expectations on timeline.`,
+  followUp: `Write a {tone} follow-up reply referencing the original topic, checking on status, and reiterating value or urgency without being pushy.`
+};
+
+async function quickAction(action) {
+  lastAction = action;
+  const promptTemplate = quickActionPrompts[action];
+  const prompt = promptTemplate.replace('{tone}', currentTone);
+
+  const fullPrompt = buildEmailContextPrompt(prompt);
+  setOutputLoading('replyOutput');
+  document.getElementById('insertBtn').disabled = true;
+
+  const result = await callClaude(fullPrompt, 'replyLoadingBar');
+  if (result) {
+    lastReplyText = result;
+    document.getElementById('replyOutput').textContent = result;
+    document.getElementById('insertBtn').disabled = false;
+  } else {
+    document.getElementById('replyOutput').innerHTML = '<span class="placeholder">Failed to generate. Try again.</span>';
+  }
+}
+
+async function customAction() {
+  const custom = document.getElementById('customPrompt').value.trim();
+  if (!custom) { showToast('Enter a prompt first'); return; }
+  lastAction = 'custom';
+
+  const fullPrompt = buildEmailContextPrompt(`${custom}\n\nTone: ${currentTone}.`);
+  setOutputLoading('replyOutput');
+  document.getElementById('insertBtn').disabled = true;
+
+  const result = await callClaude(fullPrompt, 'replyLoadingBar');
+  if (result) {
+    lastReplyText = result;
+    document.getElementById('replyOutput').textContent = result;
+    document.getElementById('insertBtn').disabled = false;
+  } else {
+    document.getElementById('replyOutput').innerHTML = '<span class="placeholder">Failed to generate. Try again.</span>';
+  }
+}
+
+function buildEmailContextPrompt(instruction) {
+  return `## Email Context
+Subject: ${emailContext.subject}
+From: ${emailContext.from}
+Body:
+${emailContext.body || '(No body available)'}
+
+## Task
+${instruction}
+
+Only output the email reply body — no subject line, no "Here is a reply:" preamble.`;
+}
+
+async function regenerate() {
+  if (lastAction === 'custom') {
+    customAction();
+  } else if (lastAction) {
+    quickAction(lastAction);
+  }
+}
+
+function insertReply() {
+  if (!lastReplyText) return;
+  try {
+    Office.context.mailbox.item.body.setAsync(
+      lastReplyText,
+      { coercionType: Office.CoercionType.Text },
+      function(result) {
+        if (result.status === Office.AsyncResultStatus.Succeeded) {
+          showToast('✓ Reply inserted!');
+        } else {
+          showToast('Error inserting reply');
+        }
+      }
+    );
+  } catch (e) {
+    showToast('Test mode — would insert:\n' + lastReplyText.substring(0, 60) + '…');
+  }
+}
+
+function selectTone(el) {
+  document.querySelectorAll('.tone-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  currentTone = el.dataset.tone;
+}
+
+// ═══════════════════════════════════════════════════════
+//  GRAMMAR PANEL
+// ═══════════════════════════════════════════════════════
+const grammarPrompts = {
+  fix: 'Fix all grammar, spelling, and punctuation errors in the following text. Return only the corrected text with no explanations.',
+  rewrite: 'Rewrite the following text to be clearer, more precise, and more professional. Keep the core meaning. Return only the rewritten text.',
+  shorten: 'Shorten the following text significantly while keeping all essential information. Return only the shortened text.',
+  formal: 'Rewrite the following text in a formal, professional business tone suitable for executive communication. Return only the rewritten text.',
+  technical: 'Rewrite the following text using precise technical language appropriate for Autodesk AEC/MFG/Utility professionals. Return only the rewritten text.',
+  simplify: 'Simplify the following text by removing or explaining complex jargon so it can be understood by a non-technical executive. Return only the simplified text.'
+};
+
+async function grammarAction(action) {
+  const input = document.getElementById('grammarInput').value.trim();
+  if (!input) { showToast('Enter some text first'); return; }
+
+  const prompt = grammarPrompts[action] + '\n\nText:\n' + input;
+  document.getElementById('grammarOutput').innerHTML = '<span class="spinner"></span> Processing…';
+
+  const result = await callClaude(prompt, 'grammarLoadingBar');
+  if (result) {
+    lastGrammarText = result;
+    renderDiff(input, result);
+  } else {
+    document.getElementById('grammarOutput').innerHTML = '<span style="color:var(--muted);font-style:italic">Failed. Try again.</span>';
+  }
+}
+
+function renderDiff(original, result) {
+  // Simple word-level diff display
+  const origWords = original.split(/\s+/);
+  const newWords = result.split(/\s+/);
+  const box = document.getElementById('grammarOutput');
+
+  // For a clean UX, just show before/after side by side
+  box.innerHTML =
+    '<div style="margin-bottom:8px"><span style="font-size:9px;font-family:IBM Plex Mono,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Original</span><br><span class="diff-del">' +
+    escapeHtml(original) +
+    '</span></div><div><span style="font-size:9px;font-family:IBM Plex Mono,monospace;color:var(--success);text-transform:uppercase;letter-spacing:.06em">Revised</span><br><span class="diff-add">' +
+    escapeHtml(result) +
+    '</span></div>';
+}
+
+function copyGrammar() {
+  if (!lastGrammarText) { showToast('Nothing to copy'); return; }
+  navigator.clipboard.writeText(lastGrammarText).then(() => showToast('✓ Copied!'));
+}
+
+function applyGrammar() {
+  if (!lastGrammarText) { showToast('Nothing to apply'); return; }
+  document.getElementById('composePrompt').value = lastGrammarText;
+  switchTab('compose');
+  showToast('Text sent to Compose tab');
+}
+
+// ═══════════════════════════════════════════════════════
+//  COMPOSE PANEL
+// ═══════════════════════════════════════════════════════
+function selectVertical(el, v) {
+  document.querySelectorAll('.vertical-chip').forEach(c => c.classList.remove('active-chip'));
+  el.classList.add('active-chip');
+  currentVertical = v;
+}
+
+const templatePrompts = {
+  proposal: `Write a compelling proposal email introducing Autodesk solutions for the {vertical} industry. Include a clear value proposition, 3 key benefits, and a call to action.`,
+  followup: `Write a professional follow-up email for an ongoing sales conversation in the {vertical} space. Reference previous discussion and suggest next steps.`,
+  intro: `Write a professional introductory email from an Autodesk representative to a potential customer in the {vertical} industry. Be warm but business-focused.`,
+  demo: `Write an email requesting a product demonstration, highlighting what the prospect will see and the business value. Tailored for {vertical}.`,
+  renewal: `Write a subscription renewal email for an existing Autodesk customer in the {vertical} space. Highlight new features and ROI achieved.`,
+  escalation: `Write a professional escalation email for a customer issue in the {vertical} industry. Acknowledge the issue, outline steps being taken, and set expectations.`
+};
+
+function composeTemplate(type) {
+  const prompt = templatePrompts[type].replace(/{vertical}/g, currentVertical);
+  document.getElementById('composePrompt').value = prompt;
+}
+
+async function composeEmail() {
+  const prompt = document.getElementById('composePrompt').value.trim();
+  if (!prompt) { showToast('Enter a description first'); return; }
+
+  const fullPrompt = `You are composing a new email (not a reply) for an Autodesk professional focused on the ${currentVertical} vertical.
+
+Task: ${prompt}
+
+Tone: ${currentTone}
+
+Output ONLY the complete email body (no subject, no meta-commentary). Use proper email formatting.`;
+
+  setOutputLoading('composeOutput');
+  const result = await callClaude(fullPrompt, 'composeLoadingBar');
+  if (result) {
+    lastComposeText = result;
+    document.getElementById('composeOutput').textContent = result;
+  } else {
+    document.getElementById('composeOutput').innerHTML = '<span class="placeholder">Failed. Try again.</span>';
+  }
+}
+
+function copyCompose() {
+  if (!lastComposeText) { showToast('Nothing to copy'); return; }
+  navigator.clipboard.writeText(lastComposeText).then(() => showToast('✓ Copied!'));
+}
+
+function insertCompose() {
+  if (!lastComposeText) return;
+  try {
+    Office.context.mailbox.item.body.setAsync(
+      lastComposeText,
+      { coercionType: Office.CoercionType.Text },
+      function(result) {
+        if (result.status === Office.AsyncResultStatus.Succeeded) {
+          showToast('✓ Email inserted!');
+        }
+      }
+    );
+  } catch (e) {
+    showToast('Test mode — would insert email');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  INSIGHTS PANEL
+// ═══════════════════════════════════════════════════════
+const analysisPrompts = {
+  sentiment: 'Analyze the sentiment of this email. Is the sender positive, neutral, frustrated, or urgent? Provide a brief assessment (2-3 sentences) with the sentiment score and key indicators.',
+  intent: 'What is the primary intent of this email? (e.g., seeking information, raising a complaint, making a purchase decision, scheduling, escalating). Provide your analysis in 2-3 sentences.',
+  vertical: `Based on the email content, which Autodesk vertical does this customer most likely belong to — AEC, MFG, or Utility? Explain why, referencing specific clues from the email.`,
+  urgency: 'Rate the urgency of this email on a scale of 1-5 and explain why. Identify any time-sensitive language, deadlines, or business impact indicators.',
+  opportunities: 'As an Autodesk sales professional, what upsell or cross-sell opportunities exist based on this email? List 2-3 specific Autodesk products or services that could address the customer\'s needs.',
+  risks: 'Identify any risks, red flags, or concerns in this email from an Autodesk account management perspective. Are there signs of churn risk, competitive threats, or escalating issues?'
+};
+
+async function analyzeAction(type) {
+  const prompt = `## Email to Analyze
+Subject: ${emailContext.subject}
+From: ${emailContext.from}
+Body:
+${emailContext.body || '(No body)'}
+
+## Analysis Request
+${analysisPrompts[type]}`;
+
+  setOutputLoading('insightsOutput');
+  const result = await callClaude(prompt, 'insightsLoadingBar');
+  if (result) {
+    document.getElementById('insightsOutput').textContent = result;
+  } else {
+    document.getElementById('insightsOutput').innerHTML = '<span class="placeholder">Analysis failed. Try again.</span>';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+function setOutputLoading(id) {
+  document.getElementById(id).innerHTML = '<span class="spinner"></span> Generating…';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Style active vertical chip
+document.querySelectorAll('.vertical-chip').forEach(c => {
+  c.addEventListener('click', function() {
+    document.querySelectorAll('.vertical-chip').forEach(x => x.style.borderColor = '');
+    this.style.borderColor = 'var(--accent)';
+    this.style.color = 'var(--accent)';
+  });
+});
+</script>
+</body>
+</html>
